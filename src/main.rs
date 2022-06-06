@@ -1,3 +1,4 @@
+use clap::Parser;
 use inquire::Select;
 use reqwest::get;
 use select::document::Document;
@@ -14,14 +15,24 @@ impl fmt::Display for NewsItem {
         write!(f, "{}", self.title)
     }
 }
+/// Simple program for reading news on dsl.sk
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// Open in browser or in terminal
+    #[clap(short, long)]
+    open_browser: bool,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    load_dsl_news("http://dsl.sk/").await;
+    let args = Args::parse();
+    let open_in_browser = args.open_browser;
+    load_dsl_news("http://dsl.sk/", open_in_browser).await;
     Ok(())
 }
 
-async fn load_dsl_news(url: &str) {
+async fn load_dsl_news(url: &str, open_in_broeser: bool) {
     let resp = get(url).await.unwrap();
     assert!(resp.status().is_success());
 
@@ -41,5 +52,27 @@ async fn load_dsl_news(url: &str) {
         .prompt()
         .unwrap();
 
+    if open_in_broeser {
+        show_in_browser(ans);
+    } else {
+        show_in_terminal(&ans).await;
+    }
+}
+
+fn show_in_browser(ans: NewsItem) {
     open::that("http://dsl.sk/".to_string() + &ans.link).unwrap();
+}
+
+async fn show_in_terminal(ans: &NewsItem) {
+    let resp_news = get("http://dsl.sk/".to_string() + &ans.link).await.unwrap();
+    assert!(resp_news.status().is_success());
+    let document_news = Document::from_read(resp_news.text().await.unwrap().as_bytes()).unwrap();
+    print!(
+        "{}",
+        document_news
+            .find(Attr("class", "article_body"))
+            .next()
+            .unwrap()
+            .text()
+    );
 }
