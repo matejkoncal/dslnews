@@ -67,12 +67,14 @@ async fn show_in_terminal(ans: &NewsItem) {
     let resp_news = get("http://dsl.sk/".to_string() + &ans.link).await.unwrap();
     assert!(resp_news.status().is_success());
     let document_news = Document::from_read(resp_news.text().await.unwrap().as_bytes()).unwrap();
-    print!(
-        "{}",
-        document_news
-            .find(Attr("class", "article_body"))
-            .next()
-            .unwrap()
-            .text()
-    );
+    let processed_text: String = document_news
+        .find(Attr("class", "article_body"))
+        .next()
+        .unwrap()
+        .text()
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+
+    print!("{}", textwrap::wrap(&processed_text, 100).join("\n"));
 }

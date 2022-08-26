@@ -10,4 +10,5 @@ select = "*"
 open = "1"
 tokio = { version = "1", features = ["full"] }
 clap = { version = "3.1.18", features = ["derive"] }
+textwrap = "0.15"
 
